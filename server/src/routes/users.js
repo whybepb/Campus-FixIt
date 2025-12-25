@@ -190,4 +190,38 @@ router.get("/stats/overview", auth, adminOnly, async (req, res) => {
   }
 });
 
+// PUT /api/users/push-token - Save push notification token
+router.put("/push-token", auth, async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      return res.status(400).json({ message: "Push token is required" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { pushToken } },
+      { new: true }
+    );
+
+    res.json({ message: "Push token saved successfully", user });
+  } catch (error) {
+    console.error("Save push token error:", error);
+    res.status(500).json({ message: "Error saving push token" });
+  }
+});
+
+// DELETE /api/users/push-token - Remove push notification token (on logout)
+router.delete("/push-token", auth, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, { $unset: { pushToken: 1 } });
+
+    res.json({ message: "Push token removed successfully" });
+  } catch (error) {
+    console.error("Remove push token error:", error);
+    res.status(500).json({ message: "Error removing push token" });
+  }
+});
+
 module.exports = router;

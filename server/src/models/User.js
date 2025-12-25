@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
   },
+  pushToken: {
+    type: String,
+    trim: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

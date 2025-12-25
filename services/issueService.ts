@@ -1,5 +1,7 @@
 import { Issue, CreateIssuePayload, UpdateIssuePayload, IssueFilters } from '@/types';
 import { apiClient } from './apiClient';
+import { storageService } from './storageService';
+import { API_CONFIG, STORAGE_KEYS } from '@/constants';
 
 // Set to true to use mock data (no backend needed)
 const USE_MOCK_API = false;
@@ -203,8 +205,48 @@ const realIssueService = {
   },
 
   async createIssue(payload: CreateIssuePayload): Promise<Issue> {
-    const response = await apiClient.post<{ issue: Issue }>('/issues', payload);
-    return response.issue;
+    // Use FormData to upload with images
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    formData.append('description', payload.description);
+    formData.append('category', payload.category);
+    formData.append('location', payload.location);
+    if (payload.priority) {
+      formData.append('priority', payload.priority);
+    }
+    
+    // Add image if present
+    if (payload.imageUrl) {
+      const uri = payload.imageUrl;
+      const filename = uri.split('/').pop() || 'image.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('images', {
+        uri,
+        name: filename,
+        type,
+      } as any);
+    }
+    
+    // Make request with FormData
+    const token = await storageService.get(STORAGE_KEYS.authToken);
+    const response = await fetch(`${API_CONFIG.baseUrl}/issues`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Don't set Content-Type - fetch will set it with boundary for FormData
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to create issue');
+    }
+    
+    const data = await response.json();
+    return data.issue;
   },
 
   async updateIssue(id: string, payload: UpdateIssuePayload): Promise<Issue> {

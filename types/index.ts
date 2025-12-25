@@ -30,7 +30,7 @@ export interface Issue {
   status: IssueStatus;
   priority: IssuePriority;
   imageUrl?: string;
-  location?: string;
+  location: string;
   createdBy: string;
   createdByName?: string;
   reportedBy?: {
@@ -54,7 +54,7 @@ export interface CreateIssuePayload {
   category: IssueCategory;
   priority?: IssuePriority;
   imageUrl?: string;
-  location?: string;
+  location: string;
 }
 
 export interface UpdateIssuePayload {

@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Issue, IssueFilters, CreateIssuePayload, UpdateIssuePayload } from '@/types';
 import { issueService } from '@/services/issueService';
+import { checkAndNotifyStatusChanges, showLocalNotification } from '@/services/notificationService';
 
 interface IssueContextType {
   issues: Issue[];
@@ -53,6 +54,15 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const data = await issueService.getMyIssues(filters);
+      
+      // Check for status changes and show notifications
+      const issuesForNotification = data.map(issue => ({
+        id: issue.id || (issue as any)._id,
+        title: issue.title,
+        status: issue.status,
+      }));
+      await checkAndNotifyStatusChanges(issuesForNotification);
+      
       setMyIssues(data);
     } catch (error) {
       console.error('Error fetching my issues:', error);
@@ -67,6 +77,14 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
       const newIssue = await issueService.createIssue(payload);
       setMyIssues(prev => [newIssue, ...prev]);
       setIssues(prev => [newIssue, ...prev]);
+      
+      // Show confirmation notification to student
+      await showLocalNotification(
+        '📝 Issue Submitted!',
+        'We are on it! Expect an update soon.',
+        { issueId: newIssue.id, type: 'issue_created' }
+      );
+      
       return newIssue;
     } catch (error) {
       throw error;

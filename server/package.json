@@ -8,13 +8,18 @@
     "dev": "nodemon src/index.js",
     "seed": "node src/seed.js"
   },
-  "keywords": ["campus", "issue-reporting", "api"],
+  "keywords": [
+    "campus",
+    "issue-reporting",
+    "api"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "expo-server-sdk": "^4.0.0",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",

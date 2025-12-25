@@ -31,7 +31,7 @@ export default function CreateIssueScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -92,6 +92,10 @@ export default function CreateIssueScreen() {
       newErrors.category = 'Please select a category';
     }
 
+    if (!location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -105,7 +109,7 @@ export default function CreateIssueScreen() {
         description,
         category: category!,
         priority,
-        location: location || undefined,
+        location: location,
         imageUrl: image || undefined,
       });
       
@@ -227,11 +231,12 @@ export default function CreateIssueScreen() {
 
           {/* Location */}
           <Input
-            label="Location (Optional)"
+            label="Location *"
             placeholder="e.g., Building A, Room 201"
             value={location}
             onChangeText={setLocation}
             leftIcon="location-outline"
+            error={errors.location}
           />
 
           {/* Image Upload */}

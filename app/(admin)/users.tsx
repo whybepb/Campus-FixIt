@@ -1,23 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Header, LoadingSpinner, EmptyState, UserAvatar } from '@/components';
 import Colors from '@/constants/Colors';
 import { User } from '@/types';
-
-// Mock data for users (will be replaced with API call)
-const MOCK_USERS: User[] = [
-  { id: '1', name: 'John Doe', email: 'john@campus.edu', role: 'student', studentId: 'STU001', department: 'Computer Science', createdAt: new Date(), updatedAt: new Date() },
-  { id: '2', name: 'Jane Smith', email: 'jane@campus.edu', role: 'student', studentId: 'STU002', department: 'Engineering', createdAt: new Date(), updatedAt: new Date() },
-  { id: '3', name: 'Bob Wilson', email: 'bob@campus.edu', role: 'student', studentId: 'STU003', department: 'Business', createdAt: new Date(), updatedAt: new Date() },
-  { id: '4', name: 'Alice Brown', email: 'alice@campus.edu', role: 'admin', createdAt: new Date(), updatedAt: new Date() },
-];
+import { apiClient } from '@/services/apiClient';
 
 export default function AdminUsersScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -26,14 +20,49 @@ export default function AdminUsersScreen() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUsers(MOCK_USERS);
+      const response = await apiClient.get<{ users: User[] }>('/users');
+      setUsers(response.users);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleUserRole = async (user: User) => {
+    const newRole = user.role === 'admin' ? 'student' : 'admin';
+    const action = newRole === 'admin' ? 'Make Admin' : 'Make Student';
+    
+    Alert.alert(
+      action,
+      `Are you sure you want to make ${user.name} ${newRole === 'admin' ? 'an admin' : 'a student'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: action,
+          style: newRole === 'admin' ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              setUpdatingUserId(user.id || (user as any)._id);
+              await apiClient.put(`/users/${user.id || (user as any)._id}/role`, { role: newRole });
+              
+              // Update local state
+              setUsers(prev => prev.map(u => 
+                (u.id || (u as any)._id) === (user.id || (user as any)._id) 
+                  ? { ...u, role: newRole } 
+                  : u
+              ));
+              
+              Alert.alert('Success', `${user.name} is now ${newRole === 'admin' ? 'an admin' : 'a student'}.`);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to update user role.');
+            } finally {
+              setUpdatingUserId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const filteredUsers = users.filter((user) => {
@@ -51,26 +80,57 @@ export default function AdminUsersScreen() {
   const studentCount = users.filter(u => u.role === 'student').length;
   const adminCount = users.filter(u => u.role === 'admin').length;
 
-  const renderUser = ({ item }: { item: User }) => (
-    <TouchableOpacity style={styles.userCard} activeOpacity={0.7}>
-      <UserAvatar user={item} size="medium" />
-      <View style={styles.userInfo}>
-        <View style={styles.userNameRow}>
-          <Text style={styles.userName}>{item.name}</Text>
-          <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
-            <Text style={[styles.roleText, item.role === 'admin' && styles.adminText]}>
-              {item.role === 'admin' ? 'Admin' : 'Student'}
-            </Text>
+  const renderUser = ({ item }: { item: User }) => {
+    const isUpdating = updatingUserId === (item.id || (item as any)._id);
+    
+    return (
+      <View style={styles.userCard}>
+        <View style={styles.userRow}>
+          <UserAvatar user={item} size="medium" />
+          <View style={styles.userInfo}>
+            <View style={styles.userNameRow}>
+              <Text style={styles.userName}>{item.name}</Text>
+              <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
+                <Text style={[styles.roleText, item.role === 'admin' && styles.adminText]}>
+                  {item.role === 'admin' ? 'Admin' : 'Student'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.userEmail}>{item.email}</Text>
+            {item.studentId && (
+              <Text style={styles.userDetail}>ID: {item.studentId} • {item.department}</Text>
+            )}
           </View>
         </View>
-        <Text style={styles.userEmail}>{item.email}</Text>
-        {item.studentId && (
-          <Text style={styles.userDetail}>ID: {item.studentId} • {item.department}</Text>
-        )}
+        
+        {/* Role Toggle Button */}
+        <TouchableOpacity
+          style={[
+            styles.roleButton,
+            item.role === 'admin' ? styles.demoteButton : styles.promoteButton,
+            isUpdating && styles.disabledButton,
+          ]}
+          onPress={() => toggleUserRole(item)}
+          disabled={isUpdating}
+        >
+          {isUpdating ? (
+            <Text style={styles.roleButtonText}>...</Text>
+          ) : (
+            <>
+              <Ionicons 
+                name={item.role === 'admin' ? 'person-outline' : 'shield-checkmark-outline'} 
+                size={14} 
+                color="#fff" 
+              />
+              <Text style={styles.roleButtonText}>
+                {item.role === 'admin' ? 'Make Student' : 'Make Admin'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -188,12 +248,15 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   userInfo: {
     flex: 1,
@@ -235,5 +298,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginTop: 2,
+  },
+  roleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 6,
+  },
+  promoteButton: {
+    backgroundColor: Colors.primary,
+  },
+  demoteButton: {
+    backgroundColor: Colors.warning,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  roleButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

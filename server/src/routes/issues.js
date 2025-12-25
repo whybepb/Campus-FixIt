@@ -1,8 +1,13 @@
 const express = require("express");
 const { body, query, validationResult } = require("express-validator");
 const Issue = require("../models/Issue");
+const User = require("../models/User");
 const { auth, adminOnly } = require("../middleware/auth");
 const upload = require("../middleware/upload");
+const {
+  sendIssueStatusNotification,
+  sendRemarkNotification,
+} = require("../utils/pushNotifications");
 
 const router = express.Router();
 
@@ -248,14 +253,17 @@ router.put("/:id", auth, updateIssueValidation, async (req, res) => {
       return res.status(400).json({ message: errors.array()[0].msg });
     }
 
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById(req.params.id).populate(
+      "reportedBy",
+      "name email pushToken"
+    );
 
     if (!issue) {
       return res.status(404).json({ message: "Issue not found" });
     }
 
     // Check permissions
-    const isOwner = issue.reportedBy.toString() === req.user._id.toString();
+    const isOwner = issue.reportedBy._id.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
     if (!isOwner && !isAdmin) {
@@ -280,6 +288,10 @@ router.put("/:id", auth, updateIssueValidation, async (req, res) => {
       assignedTo,
     } = req.body;
 
+    // Track old values for notifications
+    const oldStatus = issue.status;
+    const oldRemarks = issue.adminRemarks;
+
     // Students can only update these fields
     if (isOwner && !isAdmin) {
       if (title) issue.title = title;
@@ -301,6 +313,27 @@ router.put("/:id", auth, updateIssueValidation, async (req, res) => {
     }
 
     await issue.save();
+
+    // Send push notifications for status changes (only if admin updated and status changed)
+    if (isAdmin && status && oldStatus !== status) {
+      // Get the reporter with push token
+      const reporter = await User.findById(issue.reportedBy._id);
+      if (reporter && reporter.pushToken) {
+        sendIssueStatusNotification(reporter, issue, oldStatus, status).catch(
+          (err) => console.error("Failed to send status notification:", err)
+        );
+      }
+    }
+
+    // Send push notification for new admin remarks
+    if (isAdmin && adminRemarks && adminRemarks !== oldRemarks) {
+      const reporter = await User.findById(issue.reportedBy._id);
+      if (reporter && reporter.pushToken) {
+        sendRemarkNotification(reporter, issue, adminRemarks).catch((err) =>
+          console.error("Failed to send remark notification:", err)
+        );
+      }
+    }
 
     await issue.populate("reportedBy", "name email studentId");
     await issue.populate("assignedTo", "name email");
