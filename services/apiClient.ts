@@ -8,6 +8,7 @@ interface RequestOptions {
   body?: any;
   headers?: Record<string, string>;
   requiresAuth?: boolean;
+  retries?: number;
 }
 
 class ApiClient {
@@ -54,12 +55,17 @@ class ApiClient {
     }
   }
 
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const {
       method = 'GET',
       body,
       headers = {},
       requiresAuth = true,
+      retries = 3,
     } = options;
 
     const requestHeaders: Record<string, string> = {
@@ -83,26 +89,50 @@ class ApiClient {
       config.body = JSON.stringify(body);
     }
 
-    try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    let lastError: Error | null = null;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Request failed with status ${response.status}`;
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const response = await fetch(`${this.baseUrl}${endpoint}`, config);
 
-        // Check for token expiry
-        if (response.status === 401 && (errorMessage === 'Token expired' || errorMessage === 'Invalid token')) {
-          await this.handleTokenExpiry();
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.message || `Request failed with status ${response.status}`;
+
+          // Check for token expiry - don't retry auth errors
+          if (response.status === 401 && (errorMessage === 'Token expired' || errorMessage === 'Invalid token')) {
+            await this.handleTokenExpiry();
+            throw new Error(errorMessage);
+          }
+
+          // Don't retry client errors (4xx) except 408 (timeout) and 429 (rate limit)
+          if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) {
+            throw new Error(errorMessage);
+          }
+
+          throw new Error(errorMessage);
         }
 
-        throw new Error(errorMessage);
-      }
+        return await response.json();
+      } catch (error: any) {
+        lastError = error;
 
-      return await response.json();
-    } catch (error) {
-      console.error(`API Error [${method} ${endpoint}]:`, error);
-      throw error;
+        // Don't retry if it's an auth error or client error
+        if (error.message?.includes('Token expired') || error.message?.includes('Invalid token')) {
+          throw error;
+        }
+
+        // If we have more retries, wait with exponential backoff
+        if (attempt < retries - 1) {
+          const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`API request failed, retrying in ${delayMs}ms... (attempt ${attempt + 1}/${retries})`);
+          await this.delay(delayMs);
+        }
+      }
     }
+
+    console.error(`API Error [${method} ${endpoint}]:`, lastError);
+    throw lastError;
   }
 
   get<T>(endpoint: string, options?: Omit<RequestOptions, 'method'>): Promise<T> {

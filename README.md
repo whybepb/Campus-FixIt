@@ -6,11 +6,44 @@ A **Campus Issue Reporting System** built with React Native (Expo) and Node.js. 
 
 ## 📱 Screenshots
 
-|             Student Home              |              Create Issue               |               Issue Details               |              Admin Dashboard              |
-| :-----------------------------------: | :-------------------------------------: | :---------------------------------------: | :---------------------------------------: |
-| ![Home](screenshots/student-home.png) | ![Create](screenshots/create-issue.png) | ![Details](screenshots/issue-details.png) | ![Admin](screenshots/admin-dashboard.png) |
+<p align="center">
+  <img src="screenshots/IMG_3298.PNG" width="200" alt="Screenshot 1"/>
+  <img src="screenshots/IMG_3299.PNG" width="200" alt="Screenshot 2"/>
+  <img src="screenshots/IMG_3300.PNG" width="200" alt="Screenshot 3"/>
+  <img src="screenshots/IMG_3301.PNG" width="200" alt="Screenshot 4"/>
+</p>
 
-> Add screenshots to a `screenshots/` folder
+<p align="center">
+  <img src="screenshots/IMG_3302.PNG" width="200" alt="Screenshot 5"/>
+  <img src="screenshots/IMG_3303.PNG" width="200" alt="Screenshot 6"/>
+  <img src="screenshots/IMG_3304.PNG" width="200" alt="Screenshot 7"/>
+  <img src="screenshots/IMG_3305.PNG" width="200" alt="Screenshot 8"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/IMG_3306.PNG" width="200" alt="Screenshot 9"/>
+  <img src="screenshots/IMG_3307.PNG" width="200" alt="Screenshot 10"/>
+  <img src="screenshots/IMG_3308.PNG" width="200" alt="Screenshot 11"/>
+  <img src="screenshots/IMG_3309.PNG" width="200" alt="Screenshot 12"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/IMG_3310.PNG" width="200" alt="Screenshot 13"/>
+  <img src="screenshots/IMG_3311.PNG" width="200" alt="Screenshot 14"/>
+  <img src="screenshots/IMG_3312.PNG" width="200" alt="Screenshot 15"/>
+  <img src="screenshots/IMG_3313.PNG" width="200" alt="Screenshot 16"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/IMG_3314.PNG" width="200" alt="Screenshot 17"/>
+  <img src="screenshots/IMG_3315.PNG" width="200" alt="Screenshot 18"/>
+  <img src="screenshots/IMG_3316.PNG" width="200" alt="Screenshot 19"/>
+  <img src="screenshots/IMG_3317.PNG" width="200" alt="Screenshot 20"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/IMG_3318.PNG" width="200" alt="Screenshot 21"/>
+</p>
 
 ---
 
@@ -265,7 +298,7 @@ JWT_SECRET=<your-jwt-secret>
 
 ## 👥 Contributors
 
-- **Your Name** - Full Stack Developer
+- **Prathmesh Bhardwaj** - Full Stack Developer
 
 ---
 

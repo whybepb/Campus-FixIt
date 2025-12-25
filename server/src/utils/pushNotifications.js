@@ -118,16 +118,14 @@ async function sendIssueStatusNotification(user, issue, oldStatus, newStatus) {
   }
 
   const statusMessages = {
-    pending: "is pending review",
-    "in-progress": "is now being worked on",
+    open: "is pending review",
+    in_progress: "is now being worked on",
     resolved: "has been resolved",
-    rejected: "has been rejected",
   };
 
   const title = "🔔 Issue Status Updated";
-  const body = `Your issue "${issue.title}" ${
-    statusMessages[newStatus] || `status changed to ${newStatus}`
-  }`;
+  const body = `Your issue "${issue.title}" ${statusMessages[newStatus] || `status changed to ${newStatus}`
+    }`;
 
   const data = {
     type: "status_update",

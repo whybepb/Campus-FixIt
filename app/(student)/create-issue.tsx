@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Button, Header, Input } from '@/components';
+import { ISSUE_CATEGORIES, ISSUE_PRIORITIES, VALIDATION } from '@/constants';
+import Colors from '@/constants/Colors';
+import { useIssues } from '@/context';
+import { IssueCategory, IssuePriority } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Button, Input, Header } from '@/components';
-import { useIssues } from '@/context';
-import Colors from '@/constants/Colors';
-import { ISSUE_CATEGORIES, ISSUE_PRIORITIES, VALIDATION } from '@/constants';
-import { IssueCategory, IssuePriority } from '@/types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
+// Calculate card width: (screen width - padding*2 - gaps) / 3 columns
+const categoryCardWidth = (width - 40 - 24) / 3; // 40 = padding, 24 = 2 gaps of 12px
 
 export default function CreateIssueScreen() {
   const router = useRouter();
@@ -24,7 +29,7 @@ export default function CreateIssueScreen() {
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (!permissionResult.granted) {
       Alert.alert('Permission Required', 'Please allow access to your photos to upload an image.');
       return;
@@ -44,7 +49,7 @@ export default function CreateIssueScreen() {
 
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (!permissionResult.granted) {
       Alert.alert('Permission Required', 'Please allow access to your camera to take a photo.');
       return;
@@ -112,19 +117,10 @@ export default function CreateIssueScreen() {
         location: location,
         imageUrl: image || undefined,
       });
-      
-      // Clear form data
-      setTitle('');
-      setDescription('');
-      setCategory(null);
-      setPriority('medium');
-      setLocation('');
-      setImage(null);
-      setErrors({});
-      
+
       Alert.alert(
-        'Success',
-        'Your issue has been reported successfully!',
+        '✅ Success!',
+        'Your issue has been reported successfully. We\'ll get back to you soon.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (error: any) {
@@ -132,10 +128,12 @@ export default function CreateIssueScreen() {
     }
   };
 
+  const selectedCategory = ISSUE_CATEGORIES.find(c => c.value === category);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Report Issue" showBack />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -145,81 +143,117 @@ export default function CreateIssueScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[
+                styles.progressFill,
+                { width: `${Math.min(100, ((title ? 20 : 0) + (description ? 20 : 0) + (category ? 20 : 0) + (location ? 20 : 0) + (image ? 20 : 0)))}%` }
+              ]} />
+            </View>
+            <Text style={styles.progressText}>Fill in the details to report an issue</Text>
+          </View>
+
           {/* Category Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category *</Text>
-            {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>What type of issue? *</Text>
+              {errors.category && <Text style={styles.errorBadge}>Required</Text>}
+            </View>
             <View style={styles.categoryGrid}>
               {ISSUE_CATEGORIES.map((cat) => (
                 <TouchableOpacity
                   key={cat.value}
                   style={[
                     styles.categoryCard,
-                    category === cat.value && { borderColor: cat.color, backgroundColor: cat.color + '15' },
+                    category === cat.value && styles.categoryCardSelected,
+                    category === cat.value && { borderColor: cat.color },
                   ]}
                   onPress={() => setCategory(cat.value as IssueCategory)}
+                  activeOpacity={0.7}
                 >
-                  <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
-                    <Ionicons name={cat.icon as any} size={24} color={cat.color} />
+                  <View style={[
+                    styles.categoryIcon,
+                    { backgroundColor: cat.color + '20' },
+                    category === cat.value && { backgroundColor: cat.color + '30' },
+                  ]}>
+                    <Ionicons name={cat.icon as any} size={26} color={cat.color} />
                   </View>
-                  <Text style={[styles.categoryLabel, category === cat.value && { color: cat.color }]}>
+                  <Text style={[
+                    styles.categoryLabel,
+                    category === cat.value && { color: cat.color, fontWeight: '700' }
+                  ]}>
                     {cat.label}
                   </Text>
+                  {category === cat.value && (
+                    <View style={[styles.categoryCheck, { backgroundColor: cat.color }]}>
+                      <Ionicons name="checkmark" size={12} color={Colors.textOnPrimary} />
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
           {/* Title */}
-          <Input
-            label="Title *"
-            placeholder="Brief title for your issue"
-            value={title}
-            onChangeText={setTitle}
-            error={errors.title}
-            maxLength={VALIDATION.title.maxLength}
-          />
+          <View style={styles.section}>
+            <Input
+              label="Issue Title *"
+              placeholder="Brief title describing the problem"
+              value={title}
+              onChangeText={setTitle}
+              error={errors.title}
+              maxLength={VALIDATION.title.maxLength}
+              leftIcon={<Ionicons name="text" size={20} color={Colors.textSecondary} />}
+            />
+          </View>
 
           {/* Description */}
-          <View style={styles.textAreaContainer}>
-            <Text style={styles.label}>Description *</Text>
-            <View style={[styles.textArea, errors.description && styles.textAreaError]}>
+          <View style={styles.section}>
+            <Text style={styles.inputLabel}>Description *</Text>
+            <View style={[styles.textAreaContainer, errors.description && styles.textAreaError]}>
               <Input
-                placeholder="Describe the issue in detail..."
+                placeholder="Describe the issue in detail. Include any relevant information that might help us resolve it faster..."
                 value={description}
                 onChangeText={setDescription}
                 multiline
-                numberOfLines={4}
+                numberOfLines={5}
                 style={styles.textAreaInput}
                 maxLength={VALIDATION.description.maxLength}
               />
             </View>
-            {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-            <Text style={styles.charCount}>{description.length}/{VALIDATION.description.maxLength}</Text>
+            <View style={styles.textAreaFooter}>
+              {errors.description && (
+                <Text style={styles.errorText}>{errors.description}</Text>
+              )}
+              <Text style={styles.charCount}>{description.length}/{VALIDATION.description.maxLength}</Text>
+            </View>
           </View>
 
           {/* Priority */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Priority</Text>
+            <Text style={styles.sectionTitle}>Priority Level</Text>
             <View style={styles.priorityContainer}>
               {ISSUE_PRIORITIES.map((p) => (
                 <TouchableOpacity
                   key={p.value}
                   style={[
                     styles.priorityChip,
+                    priority === p.value && styles.priorityChipSelected,
                     priority === p.value && { backgroundColor: p.color, borderColor: p.color },
                   ]}
                   onPress={() => setPriority(p.value as IssuePriority)}
+                  activeOpacity={0.7}
                 >
                   <Ionicons
                     name="flag"
-                    size={14}
+                    size={16}
                     color={priority === p.value ? Colors.textOnPrimary : p.color}
                   />
                   <Text
                     style={[
                       styles.priorityText,
-                      priority === p.value && { color: Colors.textOnPrimary },
+                      { color: priority === p.value ? Colors.textOnPrimary : p.color },
                     ]}
                   >
                     {p.label}
@@ -230,44 +264,70 @@ export default function CreateIssueScreen() {
           </View>
 
           {/* Location */}
-          <Input
-            label="Location *"
-            placeholder="e.g., Building A, Room 201"
-            value={location}
-            onChangeText={setLocation}
-            leftIcon="location-outline"
-            error={errors.location}
-          />
+          <View style={styles.section}>
+            <Input
+              label="Location *"
+              placeholder="e.g., Building A, Room 201"
+              value={location}
+              onChangeText={setLocation}
+              leftIcon={<Ionicons name="location" size={20} color={Colors.textSecondary} />}
+              error={errors.location}
+            />
+          </View>
 
           {/* Image Upload */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Photo (Optional)</Text>
+            <Text style={styles.photoSubtitle}>A photo helps us identify the issue faster</Text>
+
             {image ? (
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: image }} style={styles.image} />
-                <TouchableOpacity
-                  style={styles.removeImage}
-                  onPress={() => setImage(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color={Colors.error} />
-                </TouchableOpacity>
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: image }} style={styles.imagePreview} />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.5)']}
+                  style={styles.imageOverlay}
+                />
+                <View style={styles.imageActions}>
+                  <TouchableOpacity
+                    style={styles.imageActionBtn}
+                    onPress={showImageOptions}
+                  >
+                    <Ionicons name="camera" size={18} color={Colors.textOnPrimary} />
+                    <Text style={styles.imageActionText}>Change</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.imageActionBtn, styles.imageActionBtnDanger]}
+                    onPress={() => setImage(null)}
+                  >
+                    <Ionicons name="trash" size={18} color={Colors.textOnPrimary} />
+                    <Text style={styles.imageActionText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <TouchableOpacity style={styles.uploadButton} onPress={showImageOptions}>
-                <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
+              <TouchableOpacity style={styles.uploadButton} onPress={showImageOptions} activeOpacity={0.8}>
+                <View style={styles.uploadIconContainer}>
+                  <Ionicons name="camera-outline" size={36} color={Colors.primary} />
+                </View>
                 <Text style={styles.uploadText}>Add a photo</Text>
-                <Text style={styles.uploadHint}>This helps us identify the issue faster</Text>
+                <Text style={styles.uploadHint}>Tap to take a photo or choose from library</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Submit Button */}
-          <Button
-            title="Submit Report"
-            onPress={handleSubmit}
-            loading={isLoading}
-            style={styles.submitButton}
-          />
+          <View style={styles.submitSection}>
+            <Button
+              title="Submit Report"
+              onPress={handleSubmit}
+              loading={isLoading}
+              fullWidth
+              size="large"
+            />
+            <Text style={styles.submitHint}>
+              Your report will be reviewed by the admin team
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -286,44 +346,100 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  progressContainer: {
+    marginBottom: 24,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.surfaceVariant,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 12,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
   },
-  label: {
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: -8,
+    marginBottom: 14,
+  },
+  photoSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  inputLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  errorBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.error,
+    backgroundColor: Colors.errorLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
   },
   categoryCard: {
-    width: '30%',
-    aspectRatio: 1,
+    width: categoryCardWidth,
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: Colors.border,
+    position: 'relative',
+  },
+  categoryCardSelected: {
+    backgroundColor: Colors.surface,
+    borderWidth: 2,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   categoryIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   categoryLabel: {
     fontSize: 12,
@@ -331,89 +447,148 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: 'center',
   },
-  textAreaContainer: {
-    marginBottom: 16,
+  categoryCheck: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  textArea: {
-    borderRadius: 12,
+  textAreaContainer: {
+    backgroundColor: Colors.surfaceVariant,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
   textAreaError: {
     borderColor: Colors.error,
-    borderWidth: 1,
+    backgroundColor: Colors.errorLight + '30',
   },
   textAreaInput: {
-    minHeight: 100,
+    minHeight: 120,
     textAlignVertical: 'top',
+    paddingTop: 14,
+  },
+  textAreaFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
   charCount: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'right',
-    marginTop: 4,
+    color: Colors.textLight,
+    marginLeft: 'auto',
+  },
+  errorText: {
+    fontSize: 13,
+    color: Colors.error,
+    fontWeight: '500',
   },
   priorityContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   priorityChip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 2,
     borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     gap: 6,
   },
+  priorityChipSelected: {
+    borderWidth: 2,
+  },
   priorityText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
   },
   uploadButton: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 32,
+    borderRadius: 18,
+    padding: 28,
     alignItems: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: Colors.border,
+    borderColor: Colors.primary + '40',
+  },
+  uploadIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryLight + '25',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
   },
   uploadText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text,
-    marginTop: 12,
+    marginBottom: 4,
   },
   uploadHint: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 4,
   },
-  imageContainer: {
+  imagePreviewContainer: {
     position: 'relative',
+    borderRadius: 18,
+    overflow: 'hidden',
   },
-  image: {
+  imagePreview: {
     width: '100%',
-    height: 200,
-    borderRadius: 12,
+    height: 220,
   },
-  removeImage: {
+  imageOverlay: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
   },
-  submitButton: {
-    marginTop: 24,
+  imageActions: {
+    position: 'absolute',
+    bottom: 14,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
+    gap: 10,
   },
-  errorText: {
-    fontSize: 12,
-    color: Colors.error,
-    marginTop: 4,
-    marginBottom: 8,
+  imageActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  imageActionBtnDanger: {
+    backgroundColor: Colors.error + 'CC',
+  },
+  imageActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textOnPrimary,
+  },
+  submitSection: {
+    marginTop: 12,
+  },
+  submitHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 14,
   },
 });

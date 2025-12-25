@@ -4,6 +4,13 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error("❌ FATAL ERROR: JWT_SECRET environment variable is not set!");
+  console.error("Please create a .env file with JWT_SECRET=your-secret-key");
+  process.exit(1);
+}
+
 // Import routes
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");

@@ -1,49 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Header, StatusBadge, Button, LoadingSpinner } from '@/components';
-import { useIssues } from '@/context';
-import { getCategoryConfig, getPriorityConfig, ISSUE_STATUSES, ISSUE_PRIORITIES } from '@/constants';
+import { Button, Header, LoadingSpinner, StatusBadge } from '@/components';
+import { API_CONFIG, getCategoryConfig, getPriorityConfig, ISSUE_PRIORITIES, ISSUE_STATUSES } from '@/constants';
 import Colors from '@/constants/Colors';
-import { Issue, IssueStatus, IssuePriority } from '@/types';
+import { useIssues } from '@/context';
+import { issueService } from '@/services/issueService';
+import { Issue, IssuePriority, IssueStatus } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 export default function AdminIssueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { getIssueById, updateIssue, isLoading } = useIssues();
-  
+
   const [issue, setIssue] = useState<Issue | undefined>();
   const [selectedStatus, setSelectedStatus] = useState<IssueStatus>('open');
   const [selectedPriority, setSelectedPriority] = useState<IssuePriority>('medium');
   const [remarks, setRemarks] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const foundIssue = getIssueById(id);
-      if (foundIssue) {
-        setIssue(foundIssue);
-        setSelectedStatus(foundIssue.status);
-        setSelectedPriority(foundIssue.priority);
-        setRemarks(foundIssue.remarks || '');
+    const loadIssue = async () => {
+      if (!id) return;
+
+      const cachedIssue = getIssueById(id);
+      if (cachedIssue) {
+        setIssue(cachedIssue);
+        setSelectedStatus(cachedIssue.status);
+        setSelectedPriority(cachedIssue.priority);
+        setRemarks(cachedIssue.adminRemarks || '');
+        return;
       }
-    }
-  }, [id]);
+
+      setIsFetching(true);
+      try {
+        const fetchedIssue = await issueService.getIssueById(id);
+        setIssue(fetchedIssue);
+        setSelectedStatus(fetchedIssue.status);
+        setSelectedPriority(fetchedIssue.priority);
+        setRemarks(fetchedIssue.adminRemarks || '');
+      } catch (error) {
+        console.error('Error fetching issue:', error);
+        Alert.alert('Error', 'Failed to load issue details.');
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    loadIssue();
+  }, [id, getIssueById]);
 
   const handleUpdate = async () => {
     if (!issue) return;
-    
+
     setIsUpdating(true);
     try {
       await updateIssue(issue.id, {
         status: selectedStatus,
         priority: selectedPriority,
-        remarks: remarks || undefined,
+        adminRemarks: remarks || undefined,
       });
-      
-      Alert.alert('Success', 'Issue updated successfully!');
+
+      Alert.alert('✅ Success', 'Issue updated successfully!');
       router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update issue.');
@@ -65,9 +89,9 @@ export default function AdminIssueDetailScreen() {
             try {
               await updateIssue(issue!.id, {
                 status: 'resolved',
-                remarks: remarks || 'Issue has been resolved.',
+                adminRemarks: remarks || 'Issue has been resolved.',
               });
-              Alert.alert('Success', 'Issue marked as resolved!');
+              Alert.alert('✅ Success', 'Issue marked as resolved!');
               router.back();
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to update issue.');
@@ -80,7 +104,7 @@ export default function AdminIssueDetailScreen() {
     );
   };
 
-  if (!issue) {
+  if (!issue || isFetching) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header title="Issue Details" showBack />
@@ -107,41 +131,75 @@ export default function AdminIssueDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Manage Issue" showBack />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Current Status */}
-        <View style={styles.currentStatus}>
-          <StatusBadge status={issue.status} size="large" />
-          <View style={[styles.categoryBadge, { backgroundColor: categoryConfig.color + '20' }]}>
-            <Ionicons name={categoryConfig.icon as any} size={16} color={categoryConfig.color} />
-            <Text style={[styles.categoryText, { color: categoryConfig.color }]}>
-              {categoryConfig.label}
-            </Text>
-          </View>
+        {/* Status Header */}
+        <View style={styles.statusCard}>
+          <LinearGradient
+            colors={[categoryConfig.color + '18', categoryConfig.color + '08']}
+            style={styles.statusGradient}
+          >
+            <View style={styles.statusRow}>
+              <StatusBadge status={issue.status} size="large" />
+              <View style={[styles.categoryBadge, { backgroundColor: categoryConfig.color + '20' }]}>
+                <Ionicons name={categoryConfig.icon as any} size={16} color={categoryConfig.color} />
+                <Text style={[styles.categoryText, { color: categoryConfig.color }]}>
+                  {categoryConfig.label}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
-        {/* Issue Info */}
+        {/* Issue Info Card */}
         <View style={styles.infoCard}>
           <Text style={styles.title}>{issue.title}</Text>
           <Text style={styles.description}>{issue.description}</Text>
-          
-          {issue.imageUrl && (
-            <Image source={{ uri: issue.imageUrl }} style={styles.image} />
-          )}
 
+          {/* Images */}
+          {issue.images && issue.images.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
+              {issue.images.map((img, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: img.startsWith('http') ? img : `${API_CONFIG.baseUrl.replace('/api', '')}${img}` }}
+                  style={styles.image}
+                />
+              ))}
+            </ScrollView>
+          ) : issue.imageUrl ? (
+            <Image source={{ uri: issue.imageUrl }} style={styles.singleImage} />
+          ) : null}
+
+          {/* Meta info */}
           <View style={styles.metaGrid}>
             <View style={styles.metaItem}>
-              <Ionicons name="person" size={16} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{issue.createdByName || 'Unknown'}</Text>
+              <View style={styles.metaIconBg}>
+                <Ionicons name="person" size={16} color={Colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.metaLabel}>Reported By</Text>
+                <Text style={styles.metaValue}>{issue.reportedBy?.name || issue.createdByName || 'Unknown'}</Text>
+              </View>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="calendar" size={16} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{formatDate(issue.createdAt)}</Text>
+              <View style={styles.metaIconBg}>
+                <Ionicons name="calendar" size={16} color={Colors.secondary} />
+              </View>
+              <View>
+                <Text style={styles.metaLabel}>Reported On</Text>
+                <Text style={styles.metaValue}>{formatDate(issue.createdAt)}</Text>
+              </View>
             </View>
             {issue.location && (
               <View style={styles.metaItem}>
-                <Ionicons name="location" size={16} color={Colors.textSecondary} />
-                <Text style={styles.metaText}>{issue.location}</Text>
+                <View style={styles.metaIconBg}>
+                  <Ionicons name="location" size={16} color={Colors.warning} />
+                </View>
+                <View>
+                  <Text style={styles.metaLabel}>Location</Text>
+                  <Text style={styles.metaValue}>{issue.location}</Text>
+                </View>
               </View>
             )}
           </View>
@@ -152,17 +210,29 @@ export default function AdminIssueDetailScreen() {
           <Text style={styles.sectionTitle}>Update Status</Text>
           <View style={styles.optionsGrid}>
             {ISSUE_STATUSES.map((status) => (
-              <Button
+              <TouchableOpacity
                 key={status.value}
-                title={status.label}
-                onPress={() => setSelectedStatus(status.value)}
-                variant={selectedStatus === status.value ? 'primary' : 'outline'}
-                size="small"
                 style={[
                   styles.optionButton,
-                  selectedStatus === status.value && { backgroundColor: status.color },
+                  selectedStatus === status.value && {
+                    backgroundColor: status.color,
+                    borderColor: status.color,
+                  },
                 ]}
-              />
+                onPress={() => setSelectedStatus(status.value)}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.optionDot,
+                  { backgroundColor: selectedStatus === status.value ? Colors.textOnPrimary : status.color }
+                ]} />
+                <Text style={[
+                  styles.optionText,
+                  selectedStatus === status.value && { color: Colors.textOnPrimary }
+                ]}>
+                  {status.label}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -170,19 +240,32 @@ export default function AdminIssueDetailScreen() {
         {/* Update Priority */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Update Priority</Text>
-          <View style={styles.optionsGrid}>
+          <View style={styles.priorityGrid}>
             {ISSUE_PRIORITIES.map((priority) => (
-              <Button
+              <TouchableOpacity
                 key={priority.value}
-                title={priority.label}
-                onPress={() => setSelectedPriority(priority.value)}
-                variant={selectedPriority === priority.value ? 'primary' : 'outline'}
-                size="small"
                 style={[
-                  styles.optionButton,
-                  selectedPriority === priority.value && { backgroundColor: priority.color },
+                  styles.priorityButton,
+                  selectedPriority === priority.value && {
+                    backgroundColor: priority.color,
+                    borderColor: priority.color,
+                  },
                 ]}
-              />
+                onPress={() => setSelectedPriority(priority.value)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="flag"
+                  size={14}
+                  color={selectedPriority === priority.value ? Colors.textOnPrimary : priority.color}
+                />
+                <Text style={[
+                  styles.priorityText,
+                  { color: selectedPriority === priority.value ? Colors.textOnPrimary : priority.color }
+                ]}>
+                  {priority.label}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -202,6 +285,9 @@ export default function AdminIssueDetailScreen() {
               textAlignVertical="top"
             />
           </View>
+          <Text style={styles.remarksHint}>
+            This will be visible to the student who reported the issue
+          </Text>
         </View>
 
         {/* Actions */}
@@ -210,15 +296,18 @@ export default function AdminIssueDetailScreen() {
             title="Save Changes"
             onPress={handleUpdate}
             loading={isUpdating}
+            fullWidth
+            size="large"
           />
-          
+
           {issue.status !== 'resolved' && (
             <Button
               title="Mark as Resolved"
               onPress={handleMarkResolved}
               variant="secondary"
               loading={isUpdating}
-              style={styles.resolveButton}
+              fullWidth
+              icon={<Ionicons name="checkmark-circle" size={18} color={Colors.textOnPrimary} />}
             />
           )}
         </View>
@@ -236,18 +325,26 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  currentStatus: {
+  statusCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  statusGradient: {
+    padding: 18,
+  },
+  statusRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
-    gap: 6,
+    gap: 8,
   },
   categoryText: {
     fontSize: 14,
@@ -255,74 +352,146 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 24,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   description: {
     fontSize: 15,
     color: Colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 23,
+    marginBottom: 16,
+  },
+  imagesContainer: {
     marginBottom: 16,
   },
   image: {
+    width: 260,
+    height: 160,
+    borderRadius: 14,
+    marginRight: 12,
+  },
+  singleImage: {
     width: '100%',
     height: 180,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 16,
   },
   metaGrid: {
-    gap: 12,
+    gap: 14,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  metaText: {
-    fontSize: 14,
+  metaIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaLabel: {
+    fontSize: 12,
     color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  metaValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 14,
+    letterSpacing: -0.3,
   },
   optionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   optionButton: {
-    minWidth: 90,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    gap: 8,
+  },
+  optionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  optionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  priorityGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  priorityButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    gap: 6,
+  },
+  priorityText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   remarksContainer: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
   remarksInput: {
     padding: 16,
     fontSize: 15,
     color: Colors.text,
-    minHeight: 100,
+    minHeight: 120,
+  },
+  remarksHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 8,
+    marginLeft: 4,
   },
   actions: {
     gap: 12,
     marginTop: 8,
-  },
-  resolveButton: {
-    marginTop: 4,
   },
 });

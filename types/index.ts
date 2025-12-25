@@ -30,6 +30,7 @@ export interface Issue {
   status: IssueStatus;
   priority: IssuePriority;
   imageUrl?: string;
+  images?: string[];
   location: string;
   createdBy: string;
   createdByName?: string;
@@ -41,7 +42,6 @@ export interface Issue {
     studentId?: string;
   };
   assignedTo?: string;
-  remarks?: string;
   adminRemarks?: string;
   resolvedAt?: Date;
   createdAt: Date;
@@ -60,7 +60,7 @@ export interface CreateIssuePayload {
 export interface UpdateIssuePayload {
   status?: IssueStatus;
   priority?: IssuePriority;
-  remarks?: string;
+  adminRemarks?: string;
   assignedTo?: string;
 }
 

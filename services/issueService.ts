@@ -1,7 +1,7 @@
-import { Issue, CreateIssuePayload, UpdateIssuePayload, IssueFilters } from '@/types';
+import { API_CONFIG, STORAGE_KEYS } from '@/constants';
+import { CreateIssuePayload, Issue, IssueFilters, UpdateIssuePayload } from '@/types';
 import { apiClient } from './apiClient';
 import { storageService } from './storageService';
-import { API_CONFIG, STORAGE_KEYS } from '@/constants';
 
 // Set to true to use mock data (no backend needed)
 const USE_MOCK_API = false;
@@ -31,7 +31,7 @@ const MOCK_ISSUES: Issue[] = [
     location: 'Building A, Ground Floor Restroom',
     createdBy: '1',
     createdByName: 'John Student',
-    remarks: 'Plumber has been contacted and will arrive tomorrow.',
+    adminRemarks: 'Plumber has been contacted and will arrive tomorrow.',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
   },
@@ -45,7 +45,7 @@ const MOCK_ISSUES: Issue[] = [
     location: 'Computer Lab 3, IT Building',
     createdBy: '1',
     createdByName: 'John Student',
-    remarks: 'Router has been replaced. Issue resolved.',
+    adminRemarks: 'Router has been replaced. Issue resolved.',
     resolvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
@@ -73,7 +73,7 @@ const MOCK_ISSUES: Issue[] = [
     location: 'Seminar Hall, Admin Building',
     createdBy: '1',
     createdByName: 'John Student',
-    remarks: 'Technician is scheduled to check the AC compressor.',
+    adminRemarks: 'Technician is scheduled to check the AC compressor.',
     createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
     updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
   },
@@ -85,9 +85,9 @@ let mockIssues = [...MOCK_ISSUES];
 const mockIssueService = {
   async getAllIssues(filters?: IssueFilters): Promise<Issue[]> {
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     let filtered = [...mockIssues];
-    
+
     if (filters?.category) {
       filtered = filtered.filter(i => i.category === filters.category);
     }
@@ -99,13 +99,13 @@ const mockIssueService = {
     }
     if (filters?.search) {
       const search = filters.search.toLowerCase();
-      filtered = filtered.filter(i => 
+      filtered = filtered.filter(i =>
         i.title.toLowerCase().includes(search) ||
         i.description.toLowerCase().includes(search)
       );
     }
-    
-    return filtered.sort((a, b) => 
+
+    return filtered.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   },
@@ -125,7 +125,7 @@ const mockIssueService = {
 
   async createIssue(payload: CreateIssuePayload): Promise<Issue> {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const newIssue: Issue = {
       id: Date.now().toString(),
       ...payload,
@@ -136,26 +136,26 @@ const mockIssueService = {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     mockIssues = [newIssue, ...mockIssues];
     return newIssue;
   },
 
   async updateIssue(id: string, payload: UpdateIssuePayload): Promise<Issue> {
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     const index = mockIssues.findIndex(i => i.id === id);
     if (index === -1) {
       throw new Error('Issue not found');
     }
-    
+
     const updatedIssue: Issue = {
       ...mockIssues[index],
       ...payload,
       updatedAt: new Date(),
       resolvedAt: payload.status === 'resolved' ? new Date() : mockIssues[index].resolvedAt,
     };
-    
+
     mockIssues[index] = updatedIssue;
     return updatedIssue;
   },
@@ -179,10 +179,10 @@ const realIssueService = {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.priority) params.append('priority', filters.priority);
     if (filters?.search) params.append('search', filters.search);
-    
+
     const queryString = params.toString();
     const endpoint = `/issues${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await apiClient.get<{ issues: Issue[] }>(endpoint);
     return response.issues;
   },
@@ -191,10 +191,10 @@ const realIssueService = {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
     if (filters?.status) params.append('status', filters.status);
-    
+
     const queryString = params.toString();
     const endpoint = `/issues/my${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await apiClient.get<{ issues: Issue[] }>(endpoint);
     return response.issues;
   },
@@ -214,21 +214,21 @@ const realIssueService = {
     if (payload.priority) {
       formData.append('priority', payload.priority);
     }
-    
+
     // Add image if present
     if (payload.imageUrl) {
       const uri = payload.imageUrl;
       const filename = uri.split('/').pop() || 'image.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
-      
+
       formData.append('images', {
         uri,
         name: filename,
         type,
       } as any);
     }
-    
+
     // Make request with FormData
     const token = await storageService.get(STORAGE_KEYS.authToken);
     const response = await fetch(`${API_CONFIG.baseUrl}/issues`, {
@@ -239,12 +239,12 @@ const realIssueService = {
       },
       body: formData,
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to create issue');
     }
-    
+
     const data = await response.json();
     return data.issue;
   },

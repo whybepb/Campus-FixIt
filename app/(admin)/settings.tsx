@@ -1,17 +1,21 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Header, UserAvatar } from '@/components';
-import { useAuth } from '@/context';
 import Colors from '@/constants/Colors';
+import { useAuth } from '@/context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   description: string;
   onPress: () => void;
+  color?: string;
   danger?: boolean;
 }
 
@@ -25,9 +29,9 @@ export default function AdminSettingsScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive', 
+        {
+          text: 'Logout',
+          style: 'destructive',
           onPress: async () => {
             await logout();
             router.replace('/(auth)/login');
@@ -46,12 +50,7 @@ export default function AdminSettingsScreen() {
           label: 'Admin Profile',
           description: 'Manage your admin account',
           onPress: () => Alert.alert('Coming Soon', 'Profile editing will be available soon.'),
-        },
-        {
-          icon: 'notifications-outline',
-          label: 'Notifications',
-          description: 'Configure notification preferences',
-          onPress: () => Alert.alert('Coming Soon', 'Notification settings will be available soon.'),
+          color: Colors.primary,
         },
       ],
     },
@@ -63,12 +62,7 @@ export default function AdminSettingsScreen() {
           label: 'User Management',
           description: 'View and manage users',
           onPress: () => router.push('/(admin)/users'),
-        },
-        {
-          icon: 'stats-chart-outline',
-          label: 'Analytics',
-          description: 'View issue statistics',
-          onPress: () => Alert.alert('Coming Soon', 'Analytics will be available soon.'),
+          color: Colors.secondary,
         },
       ],
     },
@@ -76,28 +70,11 @@ export default function AdminSettingsScreen() {
       title: 'App',
       items: [
         {
-          icon: 'color-palette-outline',
-          label: 'Appearance',
-          description: 'Theme and display settings',
-          onPress: () => Alert.alert('Coming Soon', 'Theme settings will be available soon.'),
-        },
-        {
           icon: 'information-circle-outline',
           label: 'About',
           description: 'App version and info',
           onPress: () => Alert.alert('Campus FixIt Admin', 'Version 1.0.0\n\nAdmin panel for managing campus issues.'),
-        },
-      ],
-    },
-    {
-      title: '',
-      items: [
-        {
-          icon: 'log-out-outline',
-          label: 'Logout',
-          description: 'Sign out of admin account',
-          onPress: handleLogout,
-          danger: true,
+          color: Colors.textSecondary,
         },
       ],
     },
@@ -106,25 +83,36 @@ export default function AdminSettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Settings" showBack />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Admin Profile Card */}
         <View style={styles.profileCard}>
-          <UserAvatar user={user} size="large" />
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>{user?.name || 'Admin'}</Text>
-            <Text style={styles.email}>{user?.email || ''}</Text>
-            <View style={styles.roleBadge}>
-              <Ionicons name="shield-checkmark" size={12} color={Colors.primary} />
-              <Text style={styles.roleText}>Administrator</Text>
+          <LinearGradient
+            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.profileGradient}
+          >
+            <View style={styles.profileContent}>
+              <View style={styles.avatarBorder}>
+                <UserAvatar user={user} size="large" />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user?.name || 'Admin'}</Text>
+                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+                <View style={styles.roleBadge}>
+                  <Ionicons name="shield-checkmark" size={14} color={Colors.textOnPrimary} />
+                  <Text style={styles.roleText}>Administrator</Text>
+                </View>
+              </View>
             </View>
-          </View>
+          </LinearGradient>
         </View>
 
         {/* Menu Sections */}
         {menuSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
-            {section.title && <Text style={styles.sectionTitle}>{section.title}</Text>}
+          <View key={sectionIndex} style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.menuContainer}>
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
@@ -136,17 +124,15 @@ export default function AdminSettingsScreen() {
                   onPress={item.onPress}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.menuIcon, item.danger && styles.menuIconDanger]}>
+                  <View style={[styles.menuIcon, { backgroundColor: (item.color || Colors.primary) + '15' }]}>
                     <Ionicons
                       name={item.icon}
                       size={20}
-                      color={item.danger ? Colors.error : Colors.primary}
+                      color={item.color || Colors.primary}
                     />
                   </View>
                   <View style={styles.menuContent}>
-                    <Text style={[styles.menuLabel, item.danger && styles.menuLabelDanger]}>
-                      {item.label}
-                    </Text>
+                    <Text style={styles.menuLabel}>{item.label}</Text>
                     <Text style={styles.menuDescription}>{item.description}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
@@ -155,6 +141,23 @@ export default function AdminSettingsScreen() {
             </View>
           </View>
         ))}
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+          <View style={styles.logoutIcon}>
+            <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+          </View>
+          <View style={styles.logoutContent}>
+            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutDescription}>Sign out of admin account</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.error} />
+        </TouchableOpacity>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Campus FixIt Admin v1.0.0</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -170,62 +173,79 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileCard: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 28,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  profileGradient: {
+    padding: 24,
+  },
+  profileContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+  },
+  avatarBorder: {
+    padding: 4,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    marginRight: 18,
   },
   profileInfo: {
-    marginLeft: 16,
     flex: 1,
   },
-  name: {
-    fontSize: 20,
+  profileName: {
+    fontSize: 22,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnPrimary,
     marginBottom: 4,
   },
-  email: {
+  profileEmail: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.textOnPrimary,
+    opacity: 0.9,
+    marginBottom: 10,
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primaryLight + '30',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 6,
     alignSelf: 'flex-start',
-    gap: 4,
   },
   roleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.textOnPrimary,
   },
-  section: {
+  menuSection: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: 10,
     marginLeft: 4,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   menuContainer: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: 'hidden',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   menuItem: {
     flexDirection: 'row',
@@ -234,34 +254,66 @@ const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.borderLight,
   },
   menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.primaryLight + '30',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  menuIconDanger: {
-    backgroundColor: Colors.errorLight,
+    marginRight: 14,
   },
   menuContent: {
     flex: 1,
-    marginLeft: 12,
   },
   menuLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
-  },
-  menuLabelDanger: {
-    color: Colors.error,
+    marginBottom: 2,
   },
   menuDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 2,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.errorLight,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 20,
+  },
+  logoutIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.error + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  logoutContent: {
+    flex: 1,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.error,
+    marginBottom: 2,
+  },
+  logoutDescription: {
+    fontSize: 13,
+    color: Colors.error,
+    opacity: 0.8,
+  },
+  footer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 13,
+    color: Colors.textLight,
   },
 });

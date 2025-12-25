@@ -1,4 +1,4 @@
-import { IssueCategory, IssueStatus, IssuePriority } from '@/types';
+import { IssueCategory, IssuePriority, IssueStatus } from '@/types';
 import Colors from './Colors';
 
 // App Configuration
@@ -15,12 +15,12 @@ export const ISSUE_CATEGORIES: {
   icon: string;
   color: string;
 }[] = [
-  { value: 'electrical', label: 'Electrical', icon: 'flash', color: Colors.categoryElectrical },
-  { value: 'water', label: 'Water', icon: 'water', color: Colors.categoryWater },
-  { value: 'internet', label: 'Internet', icon: 'wifi', color: Colors.categoryInternet },
-  { value: 'infrastructure', label: 'Infrastructure', icon: 'construct', color: Colors.categoryInfrastructure },
-  { value: 'other', label: 'Other', icon: 'ellipsis-horizontal', color: Colors.categoryOther },
-];
+    { value: 'electrical', label: 'Electrical', icon: 'flash', color: Colors.categoryElectrical },
+    { value: 'water', label: 'Water', icon: 'water', color: Colors.categoryWater },
+    { value: 'internet', label: 'Internet', icon: 'wifi', color: Colors.categoryInternet },
+    { value: 'infrastructure', label: 'Infrastructure', icon: 'construct', color: Colors.categoryInfrastructure },
+    { value: 'other', label: 'Other', icon: 'ellipsis-horizontal', color: Colors.categoryOther },
+  ];
 
 // Issue Statuses
 export const ISSUE_STATUSES: {
@@ -28,10 +28,10 @@ export const ISSUE_STATUSES: {
   label: string;
   color: string;
 }[] = [
-  { value: 'open', label: 'Open', color: Colors.statusOpen },
-  { value: 'in_progress', label: 'In Progress', color: Colors.statusInProgress },
-  { value: 'resolved', label: 'Resolved', color: Colors.statusResolved },
-];
+    { value: 'open', label: 'Open', color: Colors.statusOpen },
+    { value: 'in_progress', label: 'In Progress', color: Colors.statusInProgress },
+    { value: 'resolved', label: 'Resolved', color: Colors.statusResolved },
+  ];
 
 // Issue Priorities
 export const ISSUE_PRIORITIES: {
@@ -39,24 +39,25 @@ export const ISSUE_PRIORITIES: {
   label: string;
   color: string;
 }[] = [
-  { value: 'low', label: 'Low', color: Colors.priorityLow },
-  { value: 'medium', label: 'Medium', color: Colors.priorityMedium },
-  { value: 'high', label: 'High', color: Colors.priorityHigh },
-  { value: 'urgent', label: 'Urgent', color: Colors.priorityUrgent },
-];
+    { value: 'low', label: 'Low', color: Colors.priorityLow },
+    { value: 'medium', label: 'Medium', color: Colors.priorityMedium },
+    { value: 'high', label: 'High', color: Colors.priorityHigh },
+    { value: 'urgent', label: 'Urgent', color: Colors.priorityUrgent },
+  ];
 
 // Helper functions
-export const getCategoryConfig = (category: IssueCategory) => 
+export const getCategoryConfig = (category: IssueCategory) =>
   ISSUE_CATEGORIES.find(c => c.value === category) || ISSUE_CATEGORIES[4];
 
-export const getStatusConfig = (status: IssueStatus) => 
+export const getStatusConfig = (status: IssueStatus) =>
   ISSUE_STATUSES.find(s => s.value === status) || ISSUE_STATUSES[0];
 
-export const getPriorityConfig = (priority: IssuePriority) => 
+export const getPriorityConfig = (priority: IssuePriority) =>
   ISSUE_PRIORITIES.find(p => p.value === priority) || ISSUE_PRIORITIES[0];
 
 // API Configuration
-// Use your laptop's IP address when testing on a physical device
+// For physical device testing, replace 'localhost' with your computer's IP address
+// Find your IP: Mac/Linux: `ifconfig` or `ip addr`, Windows: `ipconfig`
 export const API_CONFIG = {
   baseUrl: 'http://10.51.8.165:3000/api',
   timeout: 10000,

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Button from './Button';
 
 interface EmptyStateProps {
@@ -13,7 +13,7 @@ interface EmptyStateProps {
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
-  icon = 'file-tray-outline',
+  icon = 'document-outline',
   title,
   description,
   actionLabel,
@@ -22,18 +22,14 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={64} color={Colors.textLight} />
+        <Ionicons name={icon} size={48} color={Colors.primary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {description && <Text style={styles.description}>{description}</Text>}
       {actionLabel && onAction && (
-        <Button
-          title={actionLabel}
-          onPress={onAction}
-          variant="primary"
-          size="medium"
-          style={styles.button}
-        />
+        <View style={styles.buttonContainer}>
+          <Button title={actionLabel} onPress={onAction} size="medium" />
+        </View>
       )}
     </View>
   );
@@ -41,36 +37,36 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
   },
   iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Colors.surfaceVariant,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.primaryLight + '20',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
-    textAlign: 'center',
     marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   description: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 8,
   },
-  button: {
-    minWidth: 160,
+  buttonContainer: {
+    marginTop: 16,
   },
 });
 

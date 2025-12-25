@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { IssueCard, CategoryCard, LoadingSpinner, EmptyState, UserAvatar } from '@/components';
-import { useAuth, useIssues } from '@/context';
-import Colors from '@/constants/Colors';
+import { EmptyState, IssueCard, LoadingSpinner, UserAvatar } from '@/components';
 import { ISSUE_CATEGORIES, ISSUE_STATUSES } from '@/constants';
+import Colors from '@/constants/Colors';
+import { useAuth, useIssues } from '@/context';
 import { IssueCategory } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -28,6 +31,14 @@ export default function HomeScreen() {
 
   const statusCounts = getStatusCounts();
   const recentIssues = myIssues.slice(0, 3);
+  const totalIssues = myIssues.length;
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -39,99 +50,164 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0] || 'Student'}! 👋</Text>
-            <Text style={styles.subtitle}>What would you like to report today?</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Student'} 👋</Text>
           </View>
-          <UserAvatar user={user} size="medium" onPress={() => router.push('/(student)/profile')} />
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => router.push('/(student)/profile')}
+            activeOpacity={0.8}
+          >
+            <UserAvatar user={user} size="medium" />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
         </View>
 
-        {/* Quick Action */}
+        {/* Quick Action Card */}
         <TouchableOpacity
-          style={styles.reportCard}
+          style={styles.reportCardOuter}
           onPress={() => router.push('/(student)/create-issue')}
           activeOpacity={0.9}
         >
-          <View style={styles.reportCardContent}>
-            <View style={styles.reportCardIcon}>
-              <Ionicons name="add-circle" size={32} color={Colors.textOnPrimary} />
+          <LinearGradient
+            colors={[Colors.primaryGradientStart, Colors.primaryGradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.reportCard}
+          >
+            <View style={styles.reportCardContent}>
+              <View style={styles.reportCardIcon}>
+                <Ionicons name="add" size={28} color={Colors.textOnPrimary} />
+              </View>
+              <View style={styles.reportCardText}>
+                <Text style={styles.reportCardTitle}>Report New Issue</Text>
+                <Text style={styles.reportCardSubtitle}>Let us know about any campus problems</Text>
+              </View>
             </View>
-            <View style={styles.reportCardText}>
-              <Text style={styles.reportCardTitle}>Report an Issue</Text>
-              <Text style={styles.reportCardSubtitle}>Let us know about any campus problems</Text>
+            <View style={styles.reportCardArrow}>
+              <Ionicons name="arrow-forward" size={20} color={Colors.textOnPrimary} />
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textOnPrimary} />
+          </LinearGradient>
         </TouchableOpacity>
 
-        {/* Status Overview */}
+        {/* Stats Overview */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Issues Overview</Text>
-          <View style={styles.statsContainer}>
-            {ISSUE_STATUSES.map((status) => (
-              <TouchableOpacity
-                key={status.value}
-                style={styles.statCard}
-                onPress={() => {
-                  setFilters({ ...filters, status: status.value });
-                  router.push('/(student)/my-issues');
-                }}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Your Issues</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/(student)/my-issues')}
+              style={styles.viewAllButton}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+              <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <TouchableOpacity
+              style={styles.statCardTotal}
+              onPress={() => router.push('/(student)/my-issues')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[Colors.surfaceVariant, Colors.surface]}
+                style={styles.statCardTotalGradient}
               >
-                <View style={[styles.statDot, { backgroundColor: status.color }]} />
-                <Text style={styles.statCount}>
-                  {statusCounts[status.value as keyof typeof statusCounts]}
-                </Text>
-                <Text style={styles.statLabel}>{status.label}</Text>
-              </TouchableOpacity>
-            ))}
+                <Text style={styles.statNumberLarge}>{totalIssues}</Text>
+                <Text style={styles.statLabelLarge}>Total Issues</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.statsColumn}>
+              {ISSUE_STATUSES.map((status) => (
+                <TouchableOpacity
+                  key={status.value}
+                  style={styles.statCardSmall}
+                  onPress={() => {
+                    setFilters({ ...filters, status: status.value });
+                    router.push('/(student)/my-issues');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.statIndicator, { backgroundColor: status.color }]} />
+                  <Text style={styles.statNumber}>
+                    {statusCounts[status.value as keyof typeof statusCounts]}
+                  </Text>
+                  <Text style={styles.statLabel}>{status.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
         {/* Categories */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
+          <Text style={styles.sectionTitle}>Quick Report</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}
+          >
             {ISSUE_CATEGORIES.map((category) => (
-              <CategoryCard
+              <TouchableOpacity
                 key={category.value}
-                category={category.value as IssueCategory}
+                style={styles.categoryCard}
                 onPress={() => {
                   setFilters({ ...filters, category: category.value as IssueCategory });
-                  router.push('/(student)/my-issues');
+                  router.push('/(student)/create-issue');
                 }}
-                size="small"
-              />
+                activeOpacity={0.8}
+              >
+                <View style={[styles.categoryIconBg, { backgroundColor: category.color + '18' }]}>
+                  <Ionicons name={category.icon as any} size={24} color={category.color} />
+                </View>
+                <Text style={styles.categoryLabel}>{category.label}</Text>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
         {/* Recent Issues */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Issues</Text>
-            <TouchableOpacity onPress={() => router.push('/(student)/my-issues')}>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {recentIssues.length > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push('/(student)/my-issues')}
+                style={styles.viewAllButton}
+              >
+                <Text style={styles.viewAllText}>See All</Text>
+                <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
-          
+
           {isLoading ? (
             <LoadingSpinner />
           ) : recentIssues.length > 0 ? (
-            recentIssues.map((issue) => (
-              <IssueCard
-                key={issue.id}
-                issue={issue}
-                onPress={() => router.push(`/(student)/issue/${issue.id}`)}
-              />
-            ))
+            <View style={styles.recentIssuesList}>
+              {recentIssues.map((issue) => (
+                <IssueCard
+                  key={issue.id}
+                  issue={issue}
+                  onPress={() => router.push(`/(student)/issue/${issue.id}`)}
+                />
+              ))}
+            </View>
           ) : (
-            <EmptyState
-              icon="document-text-outline"
-              title="No Issues Yet"
-              description="You haven't reported any issues. Tap the button above to create your first report."
-            />
+            <View style={styles.emptyContainer}>
+              <EmptyState
+                icon="document-text-outline"
+                title="No Issues Yet"
+                description="You haven't reported any issues. Tap the button above to create your first report."
+              />
+            </View>
           )}
         </View>
+
+        {/* Bottom spacing */}
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,31 +223,53 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  headerLeft: {
+    flex: 1,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  subtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginTop: 4,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  userName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.error,
+    borderWidth: 2,
+    borderColor: Colors.background,
+  },
+  reportCardOuter: {
+    marginHorizontal: 20,
+    borderRadius: 24,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
   reportCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primary,
-    marginHorizontal: 20,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    padding: 22,
+    borderRadius: 24,
   },
   reportCardContent: {
     flexDirection: 'row',
@@ -179,8 +277,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reportCardIcon: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
@@ -194,68 +292,149 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: Colors.textOnPrimary,
+    marginBottom: 4,
   },
   reportCardSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textOnPrimary,
-    opacity: 0.8,
-    marginTop: 4,
+    opacity: 0.85,
+  },
+  reportCardArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   section: {
-    marginTop: 24,
+    marginTop: 28,
     paddingHorizontal: 20,
   },
-  sectionHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 16,
+    letterSpacing: -0.3,
   },
-  seeAll: {
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '600',
   },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
     gap: 12,
   },
-  statCard: {
+  statCardTotal: {
     flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 20,
+    overflow: 'hidden',
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  statDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 8,
+  statCardTotalGradient: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
   },
-  statCount: {
-    fontSize: 24,
-    fontWeight: '700',
+  statNumberLarge: {
+    fontSize: 42,
+    fontWeight: '800',
     color: Colors.text,
+    letterSpacing: -1,
   },
-  statLabel: {
-    fontSize: 12,
+  statLabelLarge: {
+    fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 4,
+    fontWeight: '500',
+  },
+  statsColumn: {
+    flex: 1.2,
+    gap: 8,
+  },
+  statCardSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIndicator: {
+    width: 4,
+    height: 24,
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+    marginRight: 8,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    flex: 1,
   },
   categoriesContainer: {
     gap: 12,
     paddingRight: 20,
+  },
+  categoryCard: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    width: 90,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  categoryIconBg: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  recentIssuesList: {
+    gap: 0,
+  },
+  emptyContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
   },
 });

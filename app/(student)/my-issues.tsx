@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { IssueCard, FilterChipGroup, EmptyState, LoadingSpinner, Header } from '@/components';
-import { useIssues } from '@/context';
-import Colors from '@/constants/Colors';
+import { EmptyState, FilterDropdown, Header, IssueCard, LoadingSpinner } from '@/components';
 import { ISSUE_CATEGORIES, ISSUE_STATUSES } from '@/constants';
+import Colors from '@/constants/Colors';
+import { useIssues } from '@/context';
 import { Issue, IssueCategory, IssueStatus } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MyIssuesScreen() {
   const router = useRouter();
   const { myIssues, isLoading, fetchMyIssues, filters, setFilters } = useIssues();
-  
+
   const [selectedCategory, setSelectedCategory] = useState<IssueCategory | undefined>(filters.category);
   const [selectedStatus, setSelectedStatus] = useState<IssueStatus | undefined>(filters.status);
 
@@ -25,49 +26,64 @@ export default function MyIssuesScreen() {
     return true;
   });
 
-  const handleCategoryChange = (value: string | undefined) => {
-    setSelectedCategory(value as IssueCategory | undefined);
-  };
+  const hasFilters = selectedCategory || selectedStatus;
 
-  const handleStatusChange = (value: string | undefined) => {
-    setSelectedStatus(value as IssueStatus | undefined);
+  const clearFilters = () => {
+    setSelectedCategory(undefined);
+    setSelectedStatus(undefined);
   };
 
   const renderIssue = ({ item }: { item: Issue }) => (
-    <View style={styles.cardContainer}>
-      <IssueCard
-        issue={item}
-        onPress={() => router.push(`/(student)/issue/${item.id || (item as any)._id}`)}
-      />
-    </View>
+    <IssueCard
+      issue={item}
+      onPress={() => router.push(`/(student)/issue/${item.id || (item as any)._id}`)}
+    />
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="My Issues" showBack />
-      
-      {/* Filters */}
-      <View style={styles.filtersContainer}>
-        <Text style={styles.filterLabel}>Category</Text>
-        <FilterChipGroup
-          options={ISSUE_CATEGORIES.map(c => ({ value: c.value, label: c.label, color: c.color }))}
-          selectedValue={selectedCategory}
-          onSelect={handleCategoryChange}
-        />
-        
-        <Text style={[styles.filterLabel, { marginTop: 8 }]}>Status</Text>
-        <FilterChipGroup
-          options={ISSUE_STATUSES.map(s => ({ value: s.value, label: s.label, color: s.color }))}
-          selectedValue={selectedStatus}
-          onSelect={handleStatusChange}
-        />
+
+      {/* Filters Section */}
+      <View style={styles.filtersSection}>
+        <View style={styles.filtersRow}>
+          <FilterDropdown
+            label="Status"
+            options={ISSUE_STATUSES.map(s => ({
+              value: s.value,
+              label: s.label,
+              color: s.color
+            }))}
+            selectedValue={selectedStatus}
+            onSelect={(val) => setSelectedStatus(val as IssueStatus | undefined)}
+            placeholder="All Statuses"
+          />
+          <FilterDropdown
+            label="Category"
+            options={ISSUE_CATEGORIES.map(c => ({
+              value: c.value,
+              label: c.label,
+              color: c.color,
+              icon: c.icon,
+            }))}
+            selectedValue={selectedCategory}
+            onSelect={(val) => setSelectedCategory(val as IssueCategory | undefined)}
+            placeholder="All Categories"
+          />
+        </View>
       </View>
 
-      {/* Results count */}
+      {/* Results Header */}
       <View style={styles.resultsHeader}>
         <Text style={styles.resultsCount}>
-          {filteredIssues.length} issue{filteredIssues.length !== 1 ? 's' : ''}
+          {filteredIssues.length} issue{filteredIssues.length !== 1 ? 's' : ''} found
         </Text>
+        {hasFilters && (
+          <TouchableOpacity onPress={clearFilters} style={styles.clearButton}>
+            <Ionicons name="close-circle" size={16} color={Colors.primary} />
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Issues List */}
@@ -84,15 +100,17 @@ export default function MyIssuesScreen() {
             <RefreshControl refreshing={isLoading} onRefresh={fetchMyIssues} />
           }
           ListEmptyComponent={
-            <EmptyState
-              icon="document-text-outline"
-              title="No Issues Found"
-              description={selectedCategory || selectedStatus 
-                ? "Try adjusting your filters to see more results."
-                : "You haven't reported any issues yet."}
-              actionLabel="Report Issue"
-              onAction={() => router.push('/(student)/create-issue')}
-            />
+            <View style={styles.emptyContainer}>
+              <EmptyState
+                icon="document-text-outline"
+                title="No Issues Found"
+                description={hasFilters
+                  ? "Try adjusting your filters to see more results."
+                  : "You haven't reported any issues yet."}
+                actionLabel="Report Issue"
+                onAction={() => router.push('/(student)/create-issue')}
+              />
+            </View>
           }
         />
       )}
@@ -105,33 +123,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  filtersContainer: {
-    paddingTop: 8,
-    paddingBottom: 8,
+  filtersSection: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    paddingHorizontal: 20,
-    marginBottom: 4,
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   resultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   resultsCount: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  clearButtonText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 24,
     flexGrow: 1,
   },
-  cardContainer: {
-    marginBottom: 4,
+  emptyContainer: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 32,
+    marginTop: 20,
   },
 });
