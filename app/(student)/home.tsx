@@ -183,15 +183,15 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {isLoading ? (
+          {isLoading && myIssues.length === 0 && recentIssues.length === 0 ? (
             <LoadingSpinner />
           ) : recentIssues.length > 0 ? (
             <View style={styles.recentIssuesList}>
               {recentIssues.map((issue) => (
                 <IssueCard
-                  key={issue.id}
+                  key={issue.id || (issue as any)._id}
                   issue={issue}
-                  onPress={() => router.push(`/(student)/issue/${issue.id}`)}
+                  onPress={() => router.push(`/(student)/issue/${issue.id || (issue as any)._id}`)}
                 />
               ))}
             </View>

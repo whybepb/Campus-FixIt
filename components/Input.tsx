@@ -6,8 +6,8 @@ import { StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 're
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  leftIcon?: React.ReactNode | string;
+  rightIcon?: React.ReactNode | string;
   containerStyle?: ViewStyle;
   helperText?: string;
 }
@@ -30,6 +30,15 @@ const Input: React.FC<InputProps> = ({
     return Colors.border;
   };
 
+  // Helper to render icon - handles both string names and React elements
+  const renderIcon = (icon: React.ReactNode | string | undefined) => {
+    if (!icon) return null;
+    if (typeof icon === 'string') {
+      return <Ionicons name={icon as any} size={20} color={Colors.textSecondary} />;
+    }
+    return icon;
+  };
+
   return (
     <View style={containerStyle}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -44,7 +53,7 @@ const Input: React.FC<InputProps> = ({
           error && styles.inputError,
         ]}
       >
-        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+        {leftIcon && <View style={styles.leftIcon}>{renderIcon(leftIcon)}</View>}
 
         <TextInput
           style={[styles.input, leftIcon ? styles.inputWithLeftIcon : undefined, style]}
@@ -60,7 +69,7 @@ const Input: React.FC<InputProps> = ({
           {...props}
         />
 
-        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+        {rightIcon && <View style={styles.rightIcon}>{renderIcon(rightIcon)}</View>}
       </View>
 
       {error && (

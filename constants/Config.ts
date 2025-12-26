@@ -59,7 +59,7 @@ export const getPriorityConfig = (priority: IssuePriority) =>
 // For physical device testing, replace 'localhost' with your computer's IP address
 // Find your IP: Mac/Linux: `ifconfig` or `ip addr`, Windows: `ipconfig`
 export const API_CONFIG = {
-  baseUrl: 'http://10.51.8.165:3000/api',
+  baseUrl: 'http://10.51.3.206:3000/api',
   timeout: 10000,
 };
 

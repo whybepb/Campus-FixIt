@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Issue, IssueFilters, CreateIssuePayload, UpdateIssuePayload } from '@/types';
 import { issueService } from '@/services/issueService';
 import { checkAndNotifyStatusChanges, showLocalNotification } from '@/services/notificationService';
+import { CreateIssuePayload, Issue, IssueFilters, UpdateIssuePayload } from '@/types';
+import React, { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 
 interface IssueContextType {
   issues: Issue[];
@@ -54,7 +54,7 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const data = await issueService.getMyIssues(filters);
-      
+
       // Check for status changes and show notifications
       const issuesForNotification = data.map(issue => ({
         id: issue.id || (issue as any)._id,
@@ -62,7 +62,7 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
         status: issue.status,
       }));
       await checkAndNotifyStatusChanges(issuesForNotification);
-      
+
       setMyIssues(data);
     } catch (error) {
       console.error('Error fetching my issues:', error);
@@ -77,14 +77,14 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
       const newIssue = await issueService.createIssue(payload);
       setMyIssues(prev => [newIssue, ...prev]);
       setIssues(prev => [newIssue, ...prev]);
-      
+
       // Show confirmation notification to student
       await showLocalNotification(
         '📝 Issue Submitted!',
         'We are on it! Expect an update soon.',
         { issueId: newIssue.id, type: 'issue_created' }
       );
-      
+
       return newIssue;
     } catch (error) {
       throw error;
@@ -97,10 +97,10 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const updatedIssue = await issueService.updateIssue(id, payload);
-      
+
       setIssues(prev => prev.map(issue => issue.id === id ? updatedIssue : issue));
       setMyIssues(prev => prev.map(issue => issue.id === id ? updatedIssue : issue));
-      
+
       return updatedIssue;
     } catch (error) {
       throw error;
@@ -113,9 +113,10 @@ export const IssueProvider: React.FC<IssueProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       await issueService.deleteIssue(id);
-      
-      setIssues(prev => prev.filter(issue => issue.id !== id));
-      setMyIssues(prev => prev.filter(issue => issue.id !== id));
+
+      // Filter out by both id and _id to handle MongoDB documents
+      setIssues(prev => prev.filter(issue => issue.id !== id && (issue as any)._id !== id));
+      setMyIssues(prev => prev.filter(issue => issue.id !== id && (issue as any)._id !== id));
     } catch (error) {
       throw error;
     } finally {

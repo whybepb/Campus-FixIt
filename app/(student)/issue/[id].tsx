@@ -35,16 +35,33 @@ export default function IssueDetailScreen() {
       try {
         const fetchedIssue = await issueService.getIssueById(id);
         setIssue(fetchedIssue);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching issue:', error);
-        Alert.alert('Error', 'Failed to load issue details.');
+        // If issue not found, it might have been deleted - navigate away
+        if (error.message?.includes('not found')) {
+          Alert.alert(
+            'Issue Not Found',
+            'This issue may have been deleted.',
+            [{
+              text: 'OK', onPress: () => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(student)/home');
+                }
+              }
+            }]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to load issue details.');
+        }
       } finally {
         setIsFetching(false);
       }
     };
 
     loadIssue();
-  }, [id, getIssueById]);
+  }, [id, getIssueById, router]);
 
   const handleDelete = () => {
     Alert.alert(

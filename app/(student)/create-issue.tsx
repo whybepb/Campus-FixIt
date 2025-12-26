@@ -105,6 +105,16 @@ export default function CreateIssueScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setCategory(null);
+    setPriority('medium');
+    setLocation('');
+    setImage(null);
+    setErrors({});
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
 
@@ -117,6 +127,9 @@ export default function CreateIssueScreen() {
         location: location,
         imageUrl: image || undefined,
       });
+
+      // Reset form fields
+      resetForm();
 
       Alert.alert(
         '✅ Success!',
